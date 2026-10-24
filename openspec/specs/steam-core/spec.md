@@ -8,7 +8,7 @@ Provides a neutral, dependency-free in-memory model of Steam trading behavior so
 
 ### Requirement: Seeded identities are retrievable
 
-The system SHALL let tests register fake user identities with an id, admin flag, and friend flag, and retrieve them by id.
+The system SHALL let tests register fake user identities with an id, admin flag, and friend flag, retrieve them by id, and read per-user craft badges as `{ appId, level }` pairs seeded through the builder.
 
 #### Scenario: Register and retrieve a user
 
@@ -19,6 +19,11 @@ The system SHALL let tests register fake user identities with an id, admin flag,
 
 - **WHEN** a test retrieves an id that was never registered
 - **THEN** the system reports the user as absent without throwing
+
+#### Scenario: Seeded badges are retrievable
+
+- **WHEN** a test seeds badges `[{ appId: "730", level: 3 }]` for `buyer-1`
+- **THEN** retrieving `buyer-1` returns those badges alongside the existing flags
 
 ### Requirement: Bot inventory holds complete sets per app
 
@@ -36,7 +41,7 @@ The system SHALL let tests seed a bot inventory where requesting N sets of an ap
 
 ### Requirement: Sent offers move through an explicit lifecycle
 
-The system SHALL track sent offers through states `Active`, `Accepted`, `Declined`, `InvalidItems`, and `Cancelled`, and accepting an `Active` offer SHALL move the offered items between the bot and partner inventories.
+The system SHALL track sent offers through states `Active`, `Accepted`, `Declined`, `InvalidItems`, `Cancelled`, and `InEscrow`. Accepting an `Active` offer SHALL move the offered items between the bot and partner inventories. Holding an `Active` offer SHALL move items identically and land in terminal `InEscrow`.
 
 #### Scenario: Accept moves items
 
@@ -52,6 +57,16 @@ The system SHALL track sent offers through states `Active`, `Accepted`, `Decline
 
 - **WHEN** an offer is accepted after its items were removed from the giver inventory
 - **THEN** the offer state becomes `InvalidItems` and no items move
+
+#### Scenario: Hold moves items into escrow
+
+- **WHEN** a test holds an `Active` offer whose items are still present
+- **THEN** the offer state becomes `InEscrow` and inventories change exactly as on accept
+
+#### Scenario: Escrow is terminal
+
+- **WHEN** a test accepts, declines, cancels, or expires an `InEscrow` offer
+- **THEN** the system rejects the transition because the offer is no longer active
 
 ### Requirement: Confirmations resolve explicitly
 
@@ -69,7 +84,7 @@ The system SHALL mark offers that need confirmation as pending, resolve them on 
 
 ### Requirement: Failures are queued and consumed in order
 
-The system SHALL let tests queue send and inventory-fetch failures with a machine-readable code, consume them first-in-first-out on the matching operation, and succeed once the queue is empty.
+The system SHALL let tests queue send and inventory-fetch failures with a machine-readable code, consume them first-in-first-out on the matching operation, and succeed once the queue is empty. Fetch failures MAY carry a `{ userId?, appId? }` scope; on fetch, the first queued failure in insertion order whose scope matches wins, and unscoped entries match every fetch.
 
 #### Scenario: Two failures then success
 
@@ -80,6 +95,11 @@ The system SHALL let tests queue send and inventory-fetch failures with a machin
 
 - **WHEN** a test queues a fetch failure
 - **THEN** send operations are unaffected and still succeed
+
+#### Scenario: Scoped fetch failure only hits its scope
+
+- **WHEN** a test queues a fetch failure scoped to user `buyer-1` and app `730`
+- **THEN** fetching `buyer-1`/`730` reports the queued code while fetching another user or app succeeds and leaves the queued failure in place
 
 ### Requirement: Asset identifiers are deterministic
 
