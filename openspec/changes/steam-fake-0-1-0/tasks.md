@@ -19,7 +19,7 @@
 
 - [x] 4.1 Bump `package.json` to `0.1.0`, add the `CHANGELOG.md` entry calling out the **BREAKING** union addition, update `README.md` status and `docs/bot-adapter.md` mapping rows for escrow/badges/scoped-fetch, and verify `openspec validate --all --strict` passes
 - [x] 4.2 Run the full `pnpm check` plus `pnpm build` and verify ESM + CJS scratch imports of `holdOffer`, badges, and scoped failures behave as specified
-- [ ] 4.3 Tag `v0.1.0`, publish via the staged flow, and verify registry install in a scratch directory
+- [x] 4.3 Tag `v0.1.0`, publish via the staged flow, and verify registry install in a scratch directory
 
 ## Workflow follow-up
 
