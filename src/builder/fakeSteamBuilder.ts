@@ -73,6 +73,21 @@ export class FakeSteamBuilder {
     return this;
   }
 
+  slowSendOnce(ms: number): this {
+    this.core.queueSendLatency(ms);
+    return this;
+  }
+
+  slowFetchOnce(ms: number, scope: FakeFetchScope = {}): this {
+    this.core.queueFetchLatency(ms, scope);
+    return this;
+  }
+
+  slowConfirmOnce(ms: number): this {
+    this.core.queueConfirmLatency(ms);
+    return this;
+  }
+
   build(): FakeSteam {
     return new FakeSteam(this.core);
   }

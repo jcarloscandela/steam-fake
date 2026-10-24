@@ -2,6 +2,12 @@
 
 All notable changes to `steam-fake` are documented here. Versioning follows 0.x semver (see `AGENTS.md`): minor `Y` covers features and breaking changes, patch `Z` covers compatible fixes, `1.0.0` is reserved for a stable API.
 
+## [0.2.0] - 2026-10-24
+
+### Added
+
+- Scripted latency as data: `queueSendLatency` / `queueFetchLatency` (optional scope) / `queueConfirmLatency` on the handle and `slowSendOnce` / `slowFetchOnce` / `slowConfirmOnce` on the builder, consumed FIFO per operation with failures short-circuiting latency. Consumed milliseconds are reported synchronously as `latencyMs` on results and recorded events; the library never sleeps — the consumer adapter awaits the reported value.
+
 ## [0.1.0] - 2026-10-24
 
 ### Added

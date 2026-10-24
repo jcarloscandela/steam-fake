@@ -73,11 +73,15 @@ export interface FakeOperationError {
   message: string;
 }
 
-export type SendOfferResult = { ok: true; offerId: string } | { ok: false; error: FakeOperationError };
+export type SendOfferResult =
+  | { ok: true; offerId: string; latencyMs: number }
+  | { ok: false; error: FakeOperationError };
 
-export type ConfirmOfferResult = { status: "confirmed" } | { status: "stale" };
+export type ConfirmOfferResult = { status: "confirmed"; latencyMs: number } | { status: "stale"; latencyMs: number };
 
-export type FetchInventoryResult = { ok: true; cards: FakeCard[] } | { ok: false; error: FakeOperationError };
+export type FetchInventoryResult =
+  | { ok: true; cards: FakeCard[]; latencyMs: number }
+  | { ok: false; error: FakeOperationError };
 
 export type FakeOperation = "send" | "fetch" | "confirm";
 
@@ -85,4 +89,6 @@ export interface FakeRecordedEvent {
   operation: FakeOperation;
   /** Machine-readable outcome; null means the operation succeeded. */
   code: FakeErrorCode | null;
+  /** Scripted milliseconds consumed by this attempt; 0 when none queued. */
+  latencyMs: number;
 }

@@ -1,6 +1,6 @@
 {
   "name": "steam-fake",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Neutral in-memory fake of Steam trading behavior for integration tests (no network, no accounts)",
   "license": "MIT",
   "author": "Juan Carlos Candela <jccandelabordera@gmail.com>",

@@ -38,6 +38,9 @@ export class FakeSteamCore {
   private readonly sendFailures: FakeErrorCode[] = [];
   private readonly fetchFailures: Array<{ code: FakeErrorCode; scope: FakeFetchScope }> = [];
   private readonly confirmFailures: FakeErrorCode[] = [];
+  private readonly sendLatencies: number[] = [];
+  private readonly fetchLatencies: Array<{ ms: number; scope: FakeFetchScope }> = [];
+  private readonly confirmLatencies: number[] = [];
   private readonly events: FakeRecordedEvent[] = [];
 
   /** Designates which user id owns the bot side of sent offers. */
@@ -112,22 +115,20 @@ export class FakeSteamCore {
   }
 
   /**
-   * Reads one app slice of a user's inventory. Consumes the first queued
-   * fetch failure in insertion order whose scope matches (absent scope
-   * fields are wildcards) before succeeding.
+   * Reads one app slice of a user's inventory. A queued failure whose scope
+   * matches fires first (leaving latency untouched); otherwise the first
+   * queued latency in insertion order whose scope matches is consumed and
+   * reported, defaulting to zero.
    */
   fetchInventory(userId: string, appId: string): FetchInventoryResult {
-    const index = this.fetchFailures.findIndex(
-      (queued) =>
-        (queued.scope.userId === undefined || queued.scope.userId === userId) &&
-        (queued.scope.appId === undefined || queued.scope.appId === appId),
-    );
-    if (index !== -1) {
-      const [queued] = this.fetchFailures.splice(index, 1);
+    const failureIndex = this.fetchFailures.findIndex((queued) => this.scopeMatches(queued.scope, userId, appId));
+    if (failureIndex !== -1) {
+      const [queued] = this.fetchFailures.splice(failureIndex, 1);
       return { ok: false, error: this.recordFailure("fetch", queued.code) };
     }
-    this.events.push({ operation: "fetch", code: null });
-    return { ok: true, cards: this.getInventory(userId).filter((card) => card.appId === appId) };
+    const latencyMs = this.consumeFetchLatency(userId, appId);
+    this.events.push({ operation: "fetch", code: null, latencyMs });
+    return { ok: true, cards: this.getInventory(userId).filter((card) => card.appId === appId), latencyMs };
   }
 
   queueSendFailure(code: FakeErrorCode): void {
@@ -136,6 +137,18 @@ export class FakeSteamCore {
 
   queueFetchFailure(code: FakeErrorCode, scope: FakeFetchScope = {}): void {
     this.fetchFailures.push({ code, scope: { ...scope } });
+  }
+
+  queueSendLatency(ms: number): void {
+    this.sendLatencies.push(ms);
+  }
+
+  queueFetchLatency(ms: number, scope: FakeFetchScope = {}): void {
+    this.fetchLatencies.push({ ms, scope: { ...scope } });
+  }
+
+  queueConfirmLatency(ms: number): void {
+    this.confirmLatencies.push(ms);
   }
 
   queueConfirmFailure(code: FakeErrorCode): void {
@@ -162,7 +175,8 @@ export class FakeSteamCore {
     if (queued !== undefined) {
       return { ok: false, error: this.recordFailure("send", queued) };
     }
-    this.events.push({ operation: "send", code: null });
+    const latencyMs = this.sendLatencies.shift() ?? 0;
+    this.events.push({ operation: "send", code: null, latencyMs });
     this.offerSequence += 1;
     const id = `offer-${this.offerSequence}`;
     this.offers.set(id, {
@@ -174,7 +188,7 @@ export class FakeSteamCore {
       needsConfirmation: options.needsConfirmation ?? false,
       confirmed: false,
     });
-    return { ok: true, offerId: id };
+    return { ok: true, offerId: id, latencyMs };
   }
 
   getOffer(id: string): FakeOffer | undefined {
@@ -259,15 +273,16 @@ export class FakeSteamCore {
     const queued = this.confirmFailures.shift();
     if (queued !== undefined) {
       this.recordFailure("confirm", queued);
-      return { status: "stale" };
+      return { status: "stale", latencyMs: 0 };
     }
+    const latencyMs = this.confirmLatencies.shift() ?? 0;
     if (!offer.needsConfirmation || offer.confirmed) {
-      this.events.push({ operation: "confirm", code: "STALE_CONFIRMATION" });
-      return { status: "stale" };
+      this.events.push({ operation: "confirm", code: "STALE_CONFIRMATION", latencyMs });
+      return { status: "stale", latencyMs };
     }
     offer.confirmed = true;
-    this.events.push({ operation: "confirm", code: null });
-    return { status: "confirmed" };
+    this.events.push({ operation: "confirm", code: null, latencyMs });
+    return { status: "confirmed", latencyMs };
   }
 
   isPendingConfirmation(id: string): boolean {
@@ -276,8 +291,21 @@ export class FakeSteamCore {
   }
 
   private recordFailure(operation: FakeOperation, code: FakeErrorCode) {
-    this.events.push({ operation, code });
+    this.events.push({ operation, code, latencyMs: 0 });
     return { code, message: `Fake ${operation} failure: ${code}` };
+  }
+
+  private scopeMatches(scope: FakeFetchScope, userId: string, appId: string): boolean {
+    return (
+      (scope.userId === undefined || scope.userId === userId) && (scope.appId === undefined || scope.appId === appId)
+    );
+  }
+
+  private consumeFetchLatency(userId: string, appId: string): number {
+    const index = this.fetchLatencies.findIndex((queued) => this.scopeMatches(queued.scope, userId, appId));
+    if (index === -1) return 0;
+    const [queued] = this.fetchLatencies.splice(index, 1);
+    return queued.ms;
   }
 
   private requireActiveOffer(id: string): FakeOffer {

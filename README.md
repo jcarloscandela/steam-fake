@@ -104,6 +104,16 @@ const scoped = new FakeSteamBuilder()
 
 Fetching another user or app succeeds and leaves the failure queued; fetching `buyer-1` / `730` reports it.
 
+## Script a slow response
+
+Latency is data, not waiting: queue milliseconds per operation and the result reports them synchronously in `latencyMs` (plus the recorded event). The library never sleeps — the consumer adapter awaits the reported value.
+
+```ts
+const slow = new FakeSteamBuilder().withBot().slowFetchOnce(1500).build();
+```
+
+The next fetch reports `latencyMs: 1500` and returns immediately; unscripted operations report `0`. Fetch latencies accept the same optional scope as fetch failures.
+
 ## API surface
 
 Everything is imported from `"steam-fake"` — deep imports are not supported.
@@ -112,6 +122,7 @@ Everything is imported from `"steam-fake"` — deep imports are not supported.
 | -------- | ---------------------------------------------------------------------------------------------- |
 | Seeding  | `withBot`, `withBotSets`, `withUser`, `withUserCards`, `withLevel`, `withBadges`, `withPendingDonation` |
 | Failures | `failSendOnce`, `failFetchOnce` (optional scope), `failConfirmOnce` (builder) and `queue*Failure` (live handle) |
+| Latency  | `slowSendOnce`, `slowFetchOnce` (optional scope), `slowConfirmOnce` (builder) and `queue*Latency` (live handle); reported as `latencyMs` |
 | Runtime  | `sendOffer`, `acceptOffer`, `holdOffer`, `declineOffer`, `cancelOffer`, `confirmOffer`, `expireOffer`, `setUserCards` |
 | Reads    | `getUser`, `getInventory`, `getOffer`, `listOffers`, `sendAttempts`, `getEvents`                |
 
@@ -119,7 +130,7 @@ Determinism: asset IDs derive from `(appId, class, sequence)`, so identical seed
 
 ## Status
 
-Public pre-stable line (`v0.1.0`). Install with `pnpm add -D steam-fake@0.1.0`. `1.0.0` is reserved for a stable, bot-integrated API.
+Public pre-stable line (`v0.2.0`). Install with `pnpm add -D steam-fake@0.2.0`. `1.0.0` is reserved for a stable, bot-integrated API.
 
 ## Scope and non-goals
 

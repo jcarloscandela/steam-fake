@@ -145,7 +145,7 @@ describe("FakeSteamCore confirmations", () => {
     const result = core.sendOffer("buyer-1", [], [], { needsConfirmation: true });
     const offerId = result.ok ? result.offerId : "";
     expect(core.isPendingConfirmation(offerId)).toBe(true);
-    expect(core.confirmOffer(offerId)).toEqual({ status: "confirmed" });
+    expect(core.confirmOffer(offerId)).toEqual({ status: "confirmed", latencyMs: 0 });
     expect(core.isPendingConfirmation(offerId)).toBe(false);
   });
 
@@ -155,7 +155,7 @@ describe("FakeSteamCore confirmations", () => {
     const result = core.sendOffer("buyer-1", [], [], { needsConfirmation: true });
     const offerId = result.ok ? result.offerId : "";
     core.confirmOffer(offerId);
-    expect(core.confirmOffer(offerId)).toEqual({ status: "stale" });
+    expect(core.confirmOffer(offerId)).toEqual({ status: "stale", latencyMs: 0 });
     expect(core.isPendingConfirmation(offerId)).toBe(false);
     expect(core.getOffer(offerId)?.state).toBe("Active");
   });
@@ -220,6 +220,50 @@ describe("FakeSteamCore failure queues", () => {
     const second = core.fetchInventory("buyer-1", "730");
     expect(second.ok).toBe(false);
     if (!second.ok) expect(second.error.code).toBe("TIMEOUT");
+  });
+});
+
+describe("FakeSteamCore scripted latency", () => {
+  it("reports a slow fetch without waiting", () => {
+    const core = new FakeSteamCore();
+    core.seedSets("bot", "730", 1);
+    core.queueFetchLatency(1500);
+    const fetched = core.fetchInventory("bot", "730");
+    expect(fetched.ok).toBe(true);
+    if (fetched.ok) {
+      expect(fetched.latencyMs).toBe(1500);
+      expect(fetched.cards).toHaveLength(5);
+    }
+    expect(core.getEvents()).toEqual([{ operation: "fetch", code: null, latencyMs: 1500 }]);
+  });
+
+  it("reports zero latency by default", () => {
+    const core = new FakeSteamCore();
+    const sent = core.sendOffer("buyer-1", [], []);
+    expect(sent.ok).toBe(true);
+    if (sent.ok) expect(sent.latencyMs).toBe(0);
+  });
+
+  it("consumes scoped fetch latency only on matching fetches", () => {
+    const core = new FakeSteamCore();
+    core.queueFetchLatency(500, { userId: "buyer-1", appId: "730" });
+    const miss = core.fetchInventory("buyer-2", "730");
+    expect(miss.ok).toBe(true);
+    if (miss.ok) expect(miss.latencyMs).toBe(0);
+    const hit = core.fetchInventory("buyer-1", "730");
+    expect(hit.ok).toBe(true);
+    if (hit.ok) expect(hit.latencyMs).toBe(500);
+  });
+
+  it("leaves latency queued when a failure fires", () => {
+    const core = new FakeSteamCore();
+    core.queueFetchFailure("RATE_LIMITED");
+    core.queueFetchLatency(750);
+    const failed = core.fetchInventory("bot", "730");
+    expect(failed.ok).toBe(false);
+    const slow = core.fetchInventory("bot", "730");
+    expect(slow.ok).toBe(true);
+    if (slow.ok) expect(slow.latencyMs).toBe(750);
   });
 });
 

@@ -69,8 +69,18 @@ describe("FakeSteamBuilder failure verbs", () => {
     const steam = new FakeSteamBuilder().withBot().failConfirmOnce("STALE_CONFIRMATION").build();
     const sent = steam.sendOffer("buyer-1", [], [], { needsConfirmation: true });
     const offerId = sent.ok ? sent.offerId : "";
-    expect(steam.confirmOffer(offerId)).toEqual({ status: "stale" });
-    expect(steam.confirmOffer(offerId)).toEqual({ status: "confirmed" });
+    expect(steam.confirmOffer(offerId)).toEqual({ status: "stale", latencyMs: 0 });
+    expect(steam.confirmOffer(offerId)).toEqual({ status: "confirmed", latencyMs: 0 });
+  });
+
+  it("slows the next fetch once, then reports zero", () => {
+    const steam = new FakeSteamBuilder().withBot().slowFetchOnce(1500).build();
+    const first = steam.fetchInventory("bot", "730");
+    expect(first.ok).toBe(true);
+    if (first.ok) expect(first.latencyMs).toBe(1500);
+    const second = steam.fetchInventory("bot", "730");
+    expect(second.ok).toBe(true);
+    if (second.ok) expect(second.latencyMs).toBe(0);
   });
 });
 

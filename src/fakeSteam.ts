@@ -104,4 +104,16 @@ export class FakeSteam {
   queueConfirmFailure(code: FakeErrorCode): void {
     this.core.queueConfirmFailure(code);
   }
+
+  queueSendLatency(ms: number): void {
+    this.core.queueSendLatency(ms);
+  }
+
+  queueFetchLatency(ms: number, scope: FakeFetchScope = {}): void {
+    this.core.queueFetchLatency(ms, scope);
+  }
+
+  queueConfirmLatency(ms: number): void {
+    this.core.queueConfirmLatency(ms);
+  }
 }

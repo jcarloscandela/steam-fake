@@ -79,4 +79,12 @@ describe("README snippets", () => {
     const hit = scoped.fetchInventory("buyer-1", "730");
     expect(hit.ok).toBe(false);
   });
+
+  it("scripts a slow fetch", () => {
+    const slow = new FakeSteamBuilder().withBot().slowFetchOnce(1500).build();
+
+    const fetched = slow.fetchInventory("bot", "730");
+    expect(fetched.ok).toBe(true);
+    if (fetched.ok) expect(fetched.latencyMs).toBe(1500);
+  });
 });
