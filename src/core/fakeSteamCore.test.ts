@@ -5,13 +5,24 @@ describe("FakeSteamCore identities", () => {
   it("registers and retrieves a user with exact flags", () => {
     const core = new FakeSteamCore();
     core.registerUser({ id: "buyer-1", admin: false, friend: true });
-    expect(core.getUser("buyer-1")).toEqual({ id: "buyer-1", admin: false, friend: true });
+    expect(core.getUser("buyer-1")).toEqual({ id: "buyer-1", admin: false, friend: true, badges: [] });
   });
 
   it("returns undefined for an unknown user without throwing", () => {
     const core = new FakeSteamCore();
     expect(() => core.getUser("ghost")).not.toThrow();
     expect(core.getUser("ghost")).toBeUndefined();
+  });
+
+  it("stores and retrieves seeded badges with defensive copies", () => {
+    const core = new FakeSteamCore();
+    core.registerUser({ id: "buyer-1", admin: false, friend: true });
+    const seeded = [{ appId: "730", level: 3 }];
+    core.setUserBadges("buyer-1", seeded);
+    seeded.length = 0;
+    expect(core.getUser("buyer-1")?.badges).toEqual([{ appId: "730", level: 3 }]);
+    core.getUser("buyer-1")?.badges?.push({ appId: "440", level: 1 });
+    expect(core.getUser("buyer-1")?.badges).toEqual([{ appId: "730", level: 3 }]);
   });
 });
 
@@ -92,6 +103,39 @@ describe("FakeSteamCore offer lifecycle", () => {
     expect(core.acceptOffer(offerId)).toBe("InvalidItems");
     expect(core.getInventory("buyer-1")).toHaveLength(0);
   });
+
+  it("moves items on hold exactly like accept, into InEscrow", () => {
+    const core = new FakeSteamCore();
+    const cards = core.seedSets("bot", "730", 1);
+    const result = core.sendOffer(
+      "buyer-1",
+      cards.map((card) => ({ assetId: card.assetId, amount: 1 })),
+      [],
+    );
+    const offerId = result.ok ? result.offerId : "";
+    expect(core.holdOffer(offerId)).toBe("InEscrow");
+    expect(core.getInventory("bot")).toHaveLength(0);
+    expect(core.getInventory("buyer-1")).toHaveLength(5);
+    expect(core.getOffer(offerId)?.state).toBe("InEscrow");
+  });
+
+  it("rejects every transition out of InEscrow", () => {
+    const core = new FakeSteamCore();
+    const cards = core.seedSets("bot", "730", 1);
+    const result = core.sendOffer(
+      "buyer-1",
+      cards.map((card) => ({ assetId: card.assetId, amount: 1 })),
+      [],
+    );
+    const offerId = result.ok ? result.offerId : "";
+    core.holdOffer(offerId);
+    expect(() => core.acceptOffer(offerId)).toThrow();
+    expect(() => core.holdOffer(offerId)).toThrow();
+    expect(() => core.declineOffer(offerId)).toThrow();
+    expect(() => core.cancelOffer(offerId)).toThrow();
+    expect(() => core.expireOffer(offerId)).toThrow();
+    expect(core.getOffer(offerId)?.state).toBe("InEscrow");
+  });
 });
 
 describe("FakeSteamCore confirmations", () => {
@@ -142,6 +186,40 @@ describe("FakeSteamCore failure queues", () => {
     const refetched = core.fetchInventory("bot", "730");
     expect(refetched.ok).toBe(true);
     if (refetched.ok) expect(refetched.cards).toHaveLength(5);
+  });
+
+  it("consumes a scoped fetch failure only on matching fetches", () => {
+    const core = new FakeSteamCore();
+    core.queueFetchFailure("RATE_LIMITED", { userId: "buyer-1", appId: "730" });
+    const otherUser = core.fetchInventory("buyer-2", "730");
+    expect(otherUser.ok).toBe(true);
+    const otherApp = core.fetchInventory("buyer-1", "440");
+    expect(otherApp.ok).toBe(true);
+    const hit = core.fetchInventory("buyer-1", "730");
+    expect(hit.ok).toBe(false);
+    if (!hit.ok) expect(hit.error.code).toBe("RATE_LIMITED");
+  });
+
+  it("leaves a scoped fetch failure queued after misses", () => {
+    const core = new FakeSteamCore();
+    core.queueFetchFailure("TIMEOUT", { appId: "730" });
+    expect(core.fetchInventory("bot", "440").ok).toBe(true);
+    const hit = core.fetchInventory("bot", "730");
+    expect(hit.ok).toBe(false);
+    if (!hit.ok) expect(hit.error.code).toBe("TIMEOUT");
+    expect(core.fetchInventory("bot", "730").ok).toBe(true);
+  });
+
+  it("matches unscoped fetch failures against every fetch in order", () => {
+    const core = new FakeSteamCore();
+    core.queueFetchFailure("RATE_LIMITED");
+    core.queueFetchFailure("TIMEOUT", { userId: "buyer-1", appId: "730" });
+    const first = core.fetchInventory("buyer-2", "440");
+    expect(first.ok).toBe(false);
+    if (!first.ok) expect(first.error.code).toBe("RATE_LIMITED");
+    const second = core.fetchInventory("buyer-1", "730");
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.error.code).toBe("TIMEOUT");
   });
 });
 

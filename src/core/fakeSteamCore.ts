@@ -1,9 +1,11 @@
 import type {
   ConfirmOfferResult,
+  FakeBadge,
   FakeCard,
   FakeCardRef,
   FakeCardSpec,
   FakeErrorCode,
+  FakeFetchScope,
   FakeOffer,
   FakeOfferState,
   FakeOperation,
@@ -34,7 +36,7 @@ export class FakeSteamCore {
   private offerSequence = 0;
   private botUserId = BOT_USER_ID;
   private readonly sendFailures: FakeErrorCode[] = [];
-  private readonly fetchFailures: FakeErrorCode[] = [];
+  private readonly fetchFailures: Array<{ code: FakeErrorCode; scope: FakeFetchScope }> = [];
   private readonly confirmFailures: FakeErrorCode[] = [];
   private readonly events: FakeRecordedEvent[] = [];
 
@@ -57,12 +59,20 @@ export class FakeSteamCore {
   }
 
   registerUser(user: FakeUser): void {
-    this.users.set(user.id, { ...user });
+    this.users.set(user.id, { ...user, badges: (user.badges ?? []).map((badge) => ({ ...badge })) });
   }
 
   getUser(id: string): FakeUser | undefined {
     const found = this.users.get(id);
-    return found === undefined ? undefined : { ...found };
+    return found === undefined ? undefined : { ...found, badges: (found.badges ?? []).map((badge) => ({ ...badge })) };
+  }
+
+  setUserBadges(id: string, badges: FakeBadge[]): void {
+    const user = this.users.get(id);
+    if (user === undefined) {
+      throw new Error(`User ${id} is not registered`);
+    }
+    user.badges = badges.map((badge) => ({ ...badge }));
   }
 
   /**
@@ -102,13 +112,19 @@ export class FakeSteamCore {
   }
 
   /**
-   * Reads one app slice of a user's inventory. Consumes one queued fetch
-   * failure (first-in-first-out) before succeeding.
+   * Reads one app slice of a user's inventory. Consumes the first queued
+   * fetch failure in insertion order whose scope matches (absent scope
+   * fields are wildcards) before succeeding.
    */
   fetchInventory(userId: string, appId: string): FetchInventoryResult {
-    const queued = this.fetchFailures.shift();
-    if (queued !== undefined) {
-      return { ok: false, error: this.recordFailure("fetch", queued) };
+    const index = this.fetchFailures.findIndex(
+      (queued) =>
+        (queued.scope.userId === undefined || queued.scope.userId === userId) &&
+        (queued.scope.appId === undefined || queued.scope.appId === appId),
+    );
+    if (index !== -1) {
+      const [queued] = this.fetchFailures.splice(index, 1);
+      return { ok: false, error: this.recordFailure("fetch", queued.code) };
     }
     this.events.push({ operation: "fetch", code: null });
     return { ok: true, cards: this.getInventory(userId).filter((card) => card.appId === appId) };
@@ -118,8 +134,8 @@ export class FakeSteamCore {
     this.sendFailures.push(code);
   }
 
-  queueFetchFailure(code: FakeErrorCode): void {
-    this.fetchFailures.push(code);
+  queueFetchFailure(code: FakeErrorCode, scope: FakeFetchScope = {}): void {
+    this.fetchFailures.push({ code, scope: { ...scope } });
   }
 
   queueConfirmFailure(code: FakeErrorCode): void {
@@ -183,6 +199,20 @@ export class FakeSteamCore {
    * `InvalidItems`.
    */
   acceptOffer(id: string): FakeOfferState {
+    return this.settleOffer(id, "Accepted");
+  }
+
+  /**
+   * Holds an `Active` offer in escrow, moving items exactly as `acceptOffer`
+   * does. Terminal: the resulting `InEscrow` state lets tests assert the
+   * consumer's escrow-completion path distinctly from acceptance.
+   */
+  holdOffer(id: string): FakeOfferState {
+    return this.settleOffer(id, "InEscrow");
+  }
+
+  /** Shared item-moving settlement for the two completing terminal states. */
+  private settleOffer(id: string, state: "Accepted" | "InEscrow"): FakeOfferState {
     const offer = this.requireActiveOffer(id);
     if (!this.holdsAll(this.botUserId, offer.give) || !this.holdsAll(offer.partnerId, offer.receive)) {
       offer.state = "InvalidItems";
@@ -190,7 +220,7 @@ export class FakeSteamCore {
     }
     this.moveAll(this.botUserId, offer.partnerId, offer.give);
     this.moveAll(offer.partnerId, this.botUserId, offer.receive);
-    offer.state = "Accepted";
+    offer.state = state;
     return offer.state;
   }
 

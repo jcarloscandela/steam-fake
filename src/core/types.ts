@@ -5,6 +5,14 @@ export interface FakeUser {
   friend: boolean;
   level?: number;
   xp?: number;
+  /** Craft badges; absent on construction means none (normalized to `[]`). */
+  badges?: FakeBadge[];
+}
+
+/** A single fake craft badge: neutral app/level pair, no Steam shapes. */
+export interface FakeBadge {
+  appId: string;
+  level: number;
 }
 
 /** A single fake inventory card. Asset IDs are derived deterministically. */
@@ -15,7 +23,7 @@ export interface FakeCard {
   amount: number;
 }
 
-export type FakeOfferState = "Active" | "Accepted" | "Declined" | "InvalidItems" | "Cancelled" | "Expired";
+export type FakeOfferState = "Active" | "Accepted" | "Declined" | "InvalidItems" | "Cancelled" | "Expired" | "InEscrow";
 
 /** A fake trade offer between the bot inventory and a partner inventory. */
 export interface FakeOffer {
@@ -41,6 +49,12 @@ export interface FakeCardSpec {
   appId: string;
   classId: string;
   amount?: number;
+}
+
+/** Optional scope restricting which inventory fetches consume a queued failure. Absent fields are wildcards. */
+export interface FakeFetchScope {
+  userId?: string;
+  appId?: string;
 }
 
 /** Machine-readable failure codes, aligned with consumer error categories. */

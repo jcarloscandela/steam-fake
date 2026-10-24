@@ -5,6 +5,7 @@ import type {
   FakeCardRef,
   FakeCardSpec,
   FakeErrorCode,
+  FakeFetchScope,
   FakeOffer,
   FakeOfferState,
   FakeRecordedEvent,
@@ -70,6 +71,10 @@ export class FakeSteam {
     return this.core.acceptOffer(id);
   }
 
+  holdOffer(id: string): FakeOfferState {
+    return this.core.holdOffer(id);
+  }
+
   declineOffer(id: string): FakeOfferState {
     return this.core.declineOffer(id);
   }
@@ -92,8 +97,8 @@ export class FakeSteam {
     this.core.queueSendFailure(code);
   }
 
-  queueFetchFailure(code: FakeErrorCode): void {
-    this.core.queueFetchFailure(code);
+  queueFetchFailure(code: FakeErrorCode, scope: FakeFetchScope = {}): void {
+    this.core.queueFetchFailure(code, scope);
   }
 
   queueConfirmFailure(code: FakeErrorCode): void {

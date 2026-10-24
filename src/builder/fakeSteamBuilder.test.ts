@@ -11,8 +11,25 @@ describe("FakeSteamBuilder seeding", () => {
       .build();
 
     expect(steam.getInventory("bot-1")).toHaveLength(10);
-    expect(steam.getUser("buyer-1")).toEqual({ id: "buyer-1", admin: false, friend: true, level: 10, xp: 150 });
+    expect(steam.getUser("buyer-1")).toEqual({
+      id: "buyer-1",
+      admin: false,
+      friend: true,
+      level: 10,
+      xp: 150,
+      badges: [],
+    });
     expect(steam.listOffers()).toHaveLength(0);
+  });
+
+  it("seeds badges onto a user", () => {
+    const steam = new FakeSteamBuilder()
+      .withBot()
+      .withUser("buyer-1", { friend: true })
+      .withBadges("buyer-1", [{ appId: "730", level: 2 }])
+      .build();
+
+    expect(steam.getUser("buyer-1")?.badges).toEqual([{ appId: "730", level: 2 }]);
   });
 
   it("expands shorthand sets into complete sets", () => {

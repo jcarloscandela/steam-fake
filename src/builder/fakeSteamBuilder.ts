@@ -1,5 +1,5 @@
 import { FakeSteamCore } from "../core/fakeSteamCore.js";
-import type { FakeCardSpec, FakeErrorCode } from "../core/types.js";
+import type { FakeBadge, FakeCardSpec, FakeErrorCode, FakeFetchScope } from "../core/types.js";
 import { FakeSteam } from "../fakeSteam.js";
 
 /**
@@ -36,6 +36,11 @@ export class FakeSteamBuilder {
     return this;
   }
 
+  withBadges(userId: string, badges: FakeBadge[]): this {
+    this.core.setUserBadges(userId, badges);
+    return this;
+  }
+
   /** Seeds a pre-existing incoming donation: donor gives, bot gives nothing. */
   withPendingDonation(donorId: string, specs: FakeCardSpec[]): this {
     if (this.core.getUser(donorId) === undefined) {
@@ -58,8 +63,8 @@ export class FakeSteamBuilder {
     return this;
   }
 
-  failFetchOnce(code: FakeErrorCode): this {
-    this.core.queueFetchFailure(code);
+  failFetchOnce(code: FakeErrorCode, scope: FakeFetchScope = {}): this {
+    this.core.queueFetchFailure(code, scope);
     return this;
   }
 

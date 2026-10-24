@@ -60,22 +60,66 @@ mid.setUserCards("bot", []);
 
 Accepting `outgoing` now yields `InvalidItems` — the cards disappeared before acceptance.
 
+## Hold an offer in escrow
+
+Holding moves items exactly like accepting, but lands in the distinct terminal state `InEscrow` for escrow-completion assertions.
+
+```ts
+const escrowed = new FakeSteamBuilder().withBot().withBotSets("730", 1).build();
+
+const stock = escrowed.getInventory("bot");
+const offer = escrowed.sendOffer(
+  "buyer-1",
+  stock.map((card) => ({ assetId: card.assetId, amount: 1 })),
+  [],
+);
+
+const offerId = offer.ok ? offer.offerId : "";
+```
+
+Holding `offerId` now yields `InEscrow` — and no further transition out of it is accepted.
+
+## Seed badges onto a user
+
+```ts
+const badged = new FakeSteamBuilder()
+  .withBot()
+  .withUser("buyer-1", { friend: true })
+  .withBadges("buyer-1", [{ appId: "730", level: 2 }])
+  .build();
+```
+
+`badged.getUser("buyer-1")?.badges` now reports `[{ appId: "730", level: 2 }]`.
+
+## Scope a fetch failure
+
+Fetch failures accept an optional `{ userId?, appId? }` scope — absent fields are wildcards, and the first queued failure in insertion order whose scope matches wins.
+
+```ts
+const scoped = new FakeSteamBuilder()
+  .withBot()
+  .failFetchOnce("RATE_LIMITED", { userId: "buyer-1", appId: "730" })
+  .build();
+```
+
+Fetching another user or app succeeds and leaves the failure queued; fetching `buyer-1` / `730` reports it.
+
 ## API surface
 
 Everything is imported from `"steam-fake"` — deep imports are not supported.
 
 | Area     | Verbs                                                                                          |
 | -------- | ---------------------------------------------------------------------------------------------- |
-| Seeding  | `withBot`, `withBotSets`, `withUser`, `withUserCards`, `withLevel`, `withPendingDonation`       |
-| Failures | `failSendOnce`, `failFetchOnce`, `failConfirmOnce` (builder) and `queue*Failure` (live handle)  |
-| Runtime  | `sendOffer`, `acceptOffer`, `declineOffer`, `cancelOffer`, `confirmOffer`, `expireOffer`, `setUserCards` |
+| Seeding  | `withBot`, `withBotSets`, `withUser`, `withUserCards`, `withLevel`, `withBadges`, `withPendingDonation` |
+| Failures | `failSendOnce`, `failFetchOnce` (optional scope), `failConfirmOnce` (builder) and `queue*Failure` (live handle) |
+| Runtime  | `sendOffer`, `acceptOffer`, `holdOffer`, `declineOffer`, `cancelOffer`, `confirmOffer`, `expireOffer`, `setUserCards` |
 | Reads    | `getUser`, `getInventory`, `getOffer`, `listOffers`, `sendAttempts`, `getEvents`                |
 
 Determinism: asset IDs derive from `(appId, class, sequence)`, so identical seeding order always yields identical inventories. There is no clock — expiry is always manual.
 
 ## Status
 
-Public pre-stable line (`v0.0.1`). Install with `pnpm add -D steam-fake@0.0.1`. `1.0.0` is reserved for a stable, bot-integrated API.
+Public pre-stable line (`v0.1.0`). Install with `pnpm add -D steam-fake@0.1.0`. `1.0.0` is reserved for a stable, bot-integrated API.
 
 ## Scope and non-goals
 

@@ -5,10 +5,12 @@ export { FakeSteam } from "./fakeSteam.js";
 export { FakeSteamCore } from "./core/fakeSteamCore.js";
 export type {
   ConfirmOfferResult,
+  FakeBadge,
   FakeCard,
   FakeCardRef,
   FakeCardSpec,
   FakeErrorCode,
+  FakeFetchScope,
   FakeOffer,
   FakeOfferState,
   FakeOperation,
