@@ -1,0 +1,17 @@
+{
+  "env": {
+    "node": true,
+    "browser": false
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "no-console": "off",
+    "no-debugger": "warn",
+    "no-duplicate-imports": "error",
+    "no-unreachable": "error",
+    "prefer-const": "warn",
+    "no-var": "warn",
+    "no-eval": "error"
+  }
+}

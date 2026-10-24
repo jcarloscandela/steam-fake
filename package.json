@@ -1,0 +1,58 @@
+{
+  "name": "steam-fake",
+  "version": "0.0.1",
+  "description": "Neutral in-memory fake of Steam trading behavior for integration tests (no network, no accounts)",
+  "license": "MIT",
+  "author": "Juan Carlos Candela <jccandelabordera@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jcarloscandela/steam-fake.git"
+  },
+  "homepage": "https://github.com/jcarloscandela/steam-fake#readme",
+  "bugs": {
+    "url": "https://github.com/jcarloscandela/steam-fake/issues"
+  },
+  "keywords": ["steam", "fake", "testing", "integration-tests", "trade-offers", "deterministic"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.22.0",
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm check && pnpm build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "oxlint --deny-warnings --config .oxlintrc.json src/",
+    "check": "pnpm typecheck && pnpm format:check && pnpm lint && pnpm test",
+    "format": "oxfmt --write \"src/**/*.ts\"",
+    "format:check": "oxfmt --check \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "tsup": "^8.5.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
