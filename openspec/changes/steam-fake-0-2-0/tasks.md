@@ -14,7 +14,7 @@
 
 - [x] 3.1 Bump `package.json` to `0.2.0`, add the `CHANGELOG.md` entry, update `README.md` status, and verify `openspec validate --all --strict` passes
 - [x] 3.2 Run the full `pnpm check` plus `pnpm build` and verify ESM + CJS scratch imports report scripted latency without waiting
-- [ ] 3.3 Tag `v0.2.0`, publish via the staged flow, and verify registry install in a scratch directory
+- [x] 3.3 Tag `v0.2.0`, publish via the staged flow, and verify registry install in a scratch directory
 
 ## Workflow follow-up
 
