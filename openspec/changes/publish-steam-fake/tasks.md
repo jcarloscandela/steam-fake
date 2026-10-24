@@ -15,14 +15,14 @@
 ## 3. GitHub and release pipeline
 
 - [ ] 3.1 Create initial commit on `main`, add GitHub remote, push with `git status` clean, and verify `git log --oneline` and `git remote -v` show the expected state
-- [ ] 3.2 Check `npm view steam-fake` availability, document fallback scope if taken, and verify the chosen name in `package.json`
-- [ ] 3.3 Add CI publish workflow with provenance (`pnpm check` + `pnpm build` + publish on tag `v*`) and verify with a dry-run or `actionlint` equivalent
+- [x] 3.2 Check `npm view steam-fake` availability, document fallback scope if taken, and verify the chosen name in `package.json`
+- [x] 3.3 Add CI publish workflow with provenance (`pnpm check` + `pnpm build` + publish on tag `v*`) and verify with a dry-run or `actionlint` equivalent
 - [ ] 3.4 Tag `v0.0.1`, publish with `--provenance --access public`, and verify install from registry in a scratch directory
 
 ## 4. Integration readiness verification
 
-- [ ] 4.1 Verify `dist/*.d.ts` contains no `paths` alias leakage and `pnpm check` (typecheck + format:check + lint + test) is fully green
-- [ ] 4.2 Draft the consumer-side adapter interface note for `steam-cards-bot` (mapping table fake ⇄ Steam shapes) as docs only, and verify each row traces to a `consumer-contract` requirement
+- [x] 4.1 Verify `dist/*.d.ts` contains no `paths` alias leakage and `pnpm check` (typecheck + format:check + lint + test) is fully green
+- [x] 4.2 Draft the consumer-side adapter interface note for `steam-cards-bot` (mapping table fake ⇄ Steam shapes) as docs only, and verify each row traces to a `consumer-contract` requirement
 
 ## Workflow follow-up
 
